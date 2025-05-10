@@ -1,11 +1,17 @@
+// Package chip8 provides a CHIP-8 emulator implementation for the Gomulator project.
+//
+// This package contains the CHIP-8 CPU, memory, display, input, and main emulator logic.
 package chip8
 
 import (
-	"log"
+	"context"
+	"log/slog"
+	"os"
 
 	"github.com/veandco/go-sdl2/sdl"
 )
 
+// Chip8 implements the CHIP-8 emulator core, including CPU, memory, display, and input.
 type Chip8 struct {
 	CPU     *CPU
 	Memory  *Memory
@@ -13,6 +19,7 @@ type Chip8 struct {
 	Input   *Input
 }
 
+// New returns a new, initialized CHIP-8 emulator instance.
 func New() *Chip8 {
 	chip8 := &Chip8{
 		CPU:     NewCPU(),
@@ -24,22 +31,28 @@ func New() *Chip8 {
 	return chip8
 }
 
+// InitDisplay initializes the SDL display for CHIP-8 output.
 func (c *Chip8) InitDisplay() {
 	var err error
 	sdl.Init(sdl.INIT_VIDEO)
 
 	c.Display.sdl, err = newSDLRenderer()
 	if err != nil {
-		log.Fatalf("SDL Init failed: %v", err)
+		slog.Default().Error("SDL Init failed", "error", err)
+		os.Exit(1)
 	}
 }
 
-func (c *Chip8) Initialize() error {
+// Initialize sets up the CHIP-8 emulator state and display.
+func (c *Chip8) Initialize(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	c.InitDisplay()
-
 	return nil
 }
 
+// UpdateTimers decrements the delay and sound timers, and plays sound if needed.
 func (c *Chip8) UpdateTimers() {
 	if c.CPU.DelayTimer > 0 {
 		c.CPU.DelayTimer--
@@ -50,11 +63,19 @@ func (c *Chip8) UpdateTimers() {
 	}
 }
 
+// Cleanup releases all emulator resources and quits SDL.
 func (c *Chip8) Cleanup() {
+	if c.Display != nil {
+		c.Display.Cleanup()
+	}
+	sdl.Quit()
 }
 
-func (c *Chip8) Render() error {
+// Render updates the CHIP-8 display.
+func (c *Chip8) Render(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	c.Display.Render()
-
 	return nil
 }

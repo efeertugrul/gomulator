@@ -28,6 +28,30 @@ go build -o chip8 cmd/chip8-emulator/main.go
 ./chip8 <path-to-rom>
 ```
 
+### Using the Emulator from Go
+
+You can also use the CHIP-8 emulator as a Go library:
+
+```go
+package main
+
+import (
+	"context"
+	"github.com/efeertugrul/gomulator/internal/chip8"
+)
+
+func main() {
+	c8 := chip8.New()
+	ctx := context.Background()
+	_ = c8.Initialize(ctx)
+	_ = c8.LoadROM(ctx, "testdata/gomulator.ch8")
+	for i := 0; i < 10; i++ {
+		_ = c8.Cycle(ctx)
+		c8.UpdateTimers()
+	}
+	c8.Cleanup()
+}
+```
 
 ## Contributing
 

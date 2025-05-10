@@ -1,8 +1,11 @@
 package main
 
 import (
-	"log"
+	"context"
+	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/efeertugrul/gomulator/internal/chip8"
@@ -15,19 +18,39 @@ const (
 )
 
 func main() {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Error("Panic occurred", "panic", r)
+			os.Exit(2)
+		}
+	}()
 	if len(os.Args) < 2 {
-		log.Fatal("Usage: chip8-emulator <ROM file>")
+		logger.Error("Usage: chip8-emulator <ROM file>")
+		os.Exit(1)
 	}
 	romPath := os.Args[1]
 
+	// Set up context and signal handling for graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		cancel()
+	}()
+
 	// Create a new CHIP-8 emulator instance
 	var emu emulator.Emulator = chip8.New()
-	emu.Initialize()
+	emu.Initialize(ctx)
 	defer emu.Cleanup()
 
 	// Load the ROM file
-	if err := emu.LoadROM(romPath); err != nil {
-		log.Fatalf("Failed to load ROM: %v", err)
+	if err := emu.LoadROM(ctx, romPath); err != nil {
+		logger.Error("Failed to load ROM", "error", err)
+		os.Exit(1)
 	}
 
 	// Set up timing
@@ -40,17 +63,32 @@ func main() {
 	// Main emulation loop
 	for {
 		select {
+		case <-ctx.Done():
+			logger.Info("Received shutdown signal, exiting...")
+			return
 		case <-clock.C:
-			if err := emu.Cycle(); err != nil {
-				log.Printf("Emulation cycle error: %v", err)
+			if err := emu.Cycle(ctx); err != nil {
+				if err == emulator.ErrQuit {
+					logger.Info("Quit requested, exiting...")
+					return
+				}
+				logger.Error("Emulation cycle error", "error", err)
 			}
 		case <-timerTicker.C:
 			emu.UpdateTimers()
-			if err := emu.HandleInput(); err != nil {
-				log.Printf("Input handling error: %v", err)
+			if err := emu.HandleInput(ctx); err != nil {
+				if err == emulator.ErrQuit {
+					logger.Info("Quit requested, exiting...")
+					return
+				}
+				logger.Error("Input handling error", "error", err)
 			}
-			if err := emu.Render(); err != nil {
-				log.Printf("Render error: %v", err)
+			if err := emu.Render(ctx); err != nil {
+				if err == emulator.ErrQuit {
+					logger.Info("Quit requested, exiting...")
+					return
+				}
+				logger.Error("Render error", "error", err)
 			}
 		}
 	}

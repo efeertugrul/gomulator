@@ -29,8 +29,18 @@ func newSDLRenderer() (*SDLRenderer, error) {
 
 	renderer, err := sdl.CreateRenderer(window, -1, sdl.RENDERER_ACCELERATED)
 	if err != nil {
+		window.Destroy()
 		return nil, err
 	}
 
 	return &SDLRenderer{window: window, renderer: renderer}, nil
+}
+
+func (r *SDLRenderer) Cleanup() {
+	if r.renderer != nil {
+		r.renderer.Destroy()
+	}
+	if r.window != nil {
+		r.window.Destroy()
+	}
 }

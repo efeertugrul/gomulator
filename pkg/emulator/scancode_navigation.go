@@ -1,0 +1,18 @@
+package emulator
+
+const (
+	SDL_SCANCODE_PRINTSCREEN = 70
+	SDL_SCANCODE_SCROLLLOCK  = 71
+	SDL_SCANCODE_PAUSE       = 72
+	SDL_SCANCODE_INSERT      = 73 /**< insert on PC help on some Mac keyboards (but
+	does send code 73 not 117) */
+	SDL_SCANCODE_HOME     = 74
+	SDL_SCANCODE_PAGEUP   = 75
+	SDL_SCANCODE_DELETE   = 76
+	SDL_SCANCODE_END      = 77
+	SDL_SCANCODE_PAGEDOWN = 78
+	SDL_SCANCODE_RIGHT    = 79
+	SDL_SCANCODE_LEFT     = 80
+	SDL_SCANCODE_DOWN     = 81
+	SDL_SCANCODE_UP       = 82
+)

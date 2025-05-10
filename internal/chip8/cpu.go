@@ -29,3 +29,8 @@ func (c *CPU) Reset() {
 	c.DelayTimer = 0
 	c.SoundTimer = 0
 }
+
+func (c *CPU) Step() error {
+	// Not used in CHIP-8, but required for interface compliance
+	return nil
+}

@@ -1,9 +1,11 @@
 package chip8
 
-import "log"
+import (
+	"log/slog"
+)
 
 func (c *Chip8) PlaySound() {
 	if c.CPU.SoundTimer > 0 {
-		log.Print("Beep!")
+		slog.Default().Info("Beep!")
 	}
 }

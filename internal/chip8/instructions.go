@@ -1,19 +1,26 @@
 package chip8
 
 import (
-	"log"
+	"context"
+	"log/slog"
 	"math/rand"
 )
 
-func (c *Chip8) Cycle() error {
+func (c *Chip8) Cycle(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	opcode := uint16(c.Memory.RAM[c.CPU.PC])<<8 | uint16(c.Memory.RAM[c.CPU.PC+1])
-	log.Printf("Current Operation 0x%X", opcode)
-	c.decodeAndExecute(opcode)
+	slog.Default().Info("Current Operation", "opcode", opcode)
+	c.decodeAndExecute(ctx, opcode)
 
 	return nil
 }
 
-func (c *Chip8) decodeAndExecute(opcode uint16) {
+func (c *Chip8) decodeAndExecute(ctx context.Context, opcode uint16) {
+	if err := ctx.Err(); err != nil {
+		return
+	}
 	switch opcode & 0xF000 {
 	case 0x0000:
 		switch opcode {
@@ -94,19 +101,23 @@ func (c *Chip8) decodeAndExecute(opcode uint16) {
 	case 0xC000:
 		c.CPU.V[(opcode&0x0F00)>>8] = byte(rand.Uint32()) & byte(opcode&0x00FF)
 	case 0xD000: // DRW Vx, Vy, nibble
-
 		nibble := opcode & 0x000F
 		c.CPU.V[15] = 0
 		x := uint16(c.CPU.V[(opcode&0x0F00)>>8])
 		y := uint16(c.CPU.V[(opcode&0x00F0)>>4])
 		for yLine := uint16(0); yLine < nibble; yLine++ {
+			if err := ctx.Err(); err != nil {
+				return
+			}
 			sprite := c.Memory.RAM[c.CPU.I+yLine]
 			for xLine := uint16(0); xLine < 8; xLine++ {
+				if err := ctx.Err(); err != nil {
+					return
+				}
 				if sprite&(0x80>>xLine) != 0 {
 					if c.Display.Pixels[yLine+y][xLine+x] {
 						c.CPU.V[15] = 1
 					}
-
 					c.Display.Pixels[yLine+y][xLine+x] = !c.Display.Pixels[yLine+y][xLine+x]
 				}
 			}
@@ -153,18 +164,23 @@ func (c *Chip8) decodeAndExecute(opcode uint16) {
 			c.Memory.RAM[c.CPU.I+2] = (c.CPU.V[(opcode&0x0F00)>>8] % 100) % 10
 		case 0x0055:
 			for i := 0; i <= int((opcode&0x0F00)>>8); i++ {
+				if err := ctx.Err(); err != nil {
+					return
+				}
 				c.Memory.RAM[c.CPU.I+uint16(i)] = c.CPU.V[i]
 			}
 			c.CPU.I += uint16((opcode&0x0F00)>>8) + 1
 		case 0x0065:
 			for i := 0; i <= int((opcode&0x0F00)>>8); i++ {
+				if err := ctx.Err(); err != nil {
+					return
+				}
 				c.CPU.V[i] = c.Memory.RAM[c.CPU.I+uint16(i)]
 			}
-
 			c.CPU.I += uint16((opcode&0x0F00)>>8) + 1
 		}
 	default:
-		log.Printf("Unknown opcode: 0x0%X\n", opcode)
+		slog.Default().Warn("Unknown opcode", "opcode", opcode)
 	}
 
 	c.CPU.PC += 2

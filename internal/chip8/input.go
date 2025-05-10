@@ -1,9 +1,10 @@
 package chip8
 
 import (
-	"github.com/veandco/go-sdl2/sdl"
+	"context"
 
 	"github.com/efeertugrul/gomulator/pkg/emulator"
+	"github.com/veandco/go-sdl2/sdl"
 )
 
 // Input handles keyboard input for the CHIP-8 emulator
@@ -70,6 +71,9 @@ func (i *Input) mapKey(code sdl.Scancode) int {
 	}
 }
 
-func (c *Chip8) HandleInput() error {
+func (c *Chip8) HandleInput(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	return c.Input.Update()
 }
